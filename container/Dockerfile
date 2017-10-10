@@ -1,22 +1,18 @@
 FROM alpine:latest
-EXPOSE 53 53/udp
 
-RUN apk --update add bind
+# Install latest version of bind and upgrade container packages with no cache.
+RUN apk --update --no-cache upgrade && \
+    apk --update --no-cache add bind
 
-RUN mkdir -m 0755 -p /var/run/named && chown -R root:named /var/run/named
 
-# /var/cache/bind needs to be owned by "bind"
-# since we are mounting, do it manually
-# NOTE: Per Dockerfile manual --> need to mkdir the mounted dir to chown
-#RUN mkdir -m 0755 -p /var/cache/bind && touch /var/cache/bind/docker-init && chown -R named:named /var/cache/bind
-RUN mkdir -m 0755 -p /var/named && touch /var/named/docker-init && chown -R named:named /var/named
-
-# Mounts
-# NOTE: Per Dockerfile manual -->
-#	"if any build steps change the data within the volume
-# 	 after it has been declared, those changes will be discarded."
-VOLUME ["/etc/bind"]
-VOLUME ["/var/named"]
+# Add entrypoint script
 
 COPY entrypoint.sh /
+RUN chmod 750 /entrypoint.sh
+
+VOLUME ["/etc/bind", "/var/named", "/var/log/named"]
+
+EXPOSE 53 53/udp
+WORKDIR /etc/bind
+
 ENTRYPOINT ["/entrypoint.sh"]
